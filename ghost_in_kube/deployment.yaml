@@ -1,0 +1,46 @@
+apiVersion: apps/v1beta1
+kind: Deployment
+metadata:
+  name: blog
+  labels:
+    app: blog
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: blog
+  template:
+    metadata:
+      labels:
+        app: blog
+    spec:
+      containers:
+      - name: cloudsql-proxy
+        command: ["/cloud_sql_proxy",
+            "-instances=<INSTANCE_CONNECTION_NAME>=tcp:3306",
+            "-credential_file=/secrets/cloudsql/interview-3436b446-38474f5b1587.json"]
+        image: gcr.io/cloudsql-docker/gce-proxy:1.11
+        volumeMounts:
+        - mountPath: /secrets/cloudsql
+          name: cloudsql-credentials
+          readOnly: true
+
+      - name: blog1
+        image: ghost:2.6-alpine
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 2368
+
+        securityContext:
+#          runAsUser: 2  # non-root user
+          allowPrivilegeEscalation: false
+        env:
+        - name: url
+          value: http://my-blog.com
+      volumes:
+      - name: cloudsql-credentials
+        secret:
+          secretName: my-secret
+ #        persistentVolumeClaim:
+ #          claimName: blog-content
+
